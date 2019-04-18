@@ -5,23 +5,86 @@
 # https://joachim-gassen.github.io/2018/10/using-the-expandar-package-for-panel-data-exploration/
 # Each observation (a row) is identified by cross-sectional 
 # and time series identifiers and that variables are organized by columns.
-install.packages("ExPanDaR")
+# install.packages("ExPanDaR")
 library(ExPanDaR)
 library(tidyverse)
 # Upload file (available at https://github.com/2622NSW/ExPanDaR)
 df <- read.csv("Dwell18.csv")
+
+# As the data seems to be cross-sectional in nature,
+# you can add an artificial time dimension
+# to make it usable for ExPanD (which expects
+# longitudinal (panel) data by default).
+# I also deleted the time/quantile plot as it
+# does not really make sense without the time dimension
+
+df$ts_id <- 1
+
 # Use the ExPanDaR package with the data.frame df
 # This example includes four components of the package:
 # A descriptive table (of all variables); a scatter plot; 
 # a quantile_trend_graph (distributions of one variable over time); and
 # a list of 5 most extreme observations.
-ExPanD(df, cs_id = "Referee", ts_id = "BIP_Seconds",
+
+ExPanD(df, cs_id = "Referee", ts_id = "ts_id",
        title = "Referee Performance at the 2018 FIFA World Cup",
        abstract = paste("This display uses data from the 2018 FIFA World Cup web site"),
        components = c(descriptive_table = TRUE, 
                       scatter_plot = TRUE,
                       quantile_trend_graph = TRUE,
                       ext_obs = TRUE))
+
+# Defining a data frame that describes the variables.
+# See 'Details' section in help(ExPanD) and the
+# 'Customizing ExPanD' vignette for some guidance.
+
+df_def <- tibble(
+  var_name = names(df),
+  var_def = c("Game ID",
+              "Name of Referee",
+              "Country of Referee",
+              "Confederation of Referee",
+              "Match",
+              "Ball in Play (Seconds)",
+              "Game Total (Seconds)",
+              "Ball not in Play (Seconds)",
+              "Dwell (as % of Exact Game Time)",
+              "Temperature at Match",
+              "Humidity at Match",
+              "Fouls at Match",
+              "Goals Scored",
+              "Pseudo time series ID"),
+  type = c("cs_id", rep("factor", 3), "cs_id", rep("numeric", 8), "ts_id")
+)
+
+ExPanD(df, df_def = df_def,
+       title = "Referee Performance at the 2018 FIFA World Cup",
+       abstract = paste("This display uses data from the 2018 FIFA World Cup web site"),
+       components = c(descriptive_table = TRUE, 
+                      scatter_plot = TRUE,
+                      ext_obs = TRUE))
+
+# Now set config to start with some interesting scatter plot
+# Save config from within ExPanD, load RDS 
+# file via readRDS and dput() the list
+# Just keep the list items you are interested in.
+
+clist <- list(
+  scatter_x = "Fouls", 
+  scatter_y = "Dwell_pc", 
+  scatter_size = "Game_Time_Seconds", 
+  scatter_color = "Referee"
+)
+
+ExPanD(df, df_def = df_def, config_list = clist,
+       title = "Referee Performance at the 2018 FIFA World Cup",
+       abstract = paste("This display uses data from the 2018 FIFA World Cup web site"),
+       components = c(descriptive_table = TRUE, 
+                      scatter_plot = TRUE,
+                      ext_obs = TRUE))
+
+
+
 # Experimenting with dplyr changes
 # https://statkclee.github.io/R-ecology-lesson/04-dplyr.html
 # https://datacarpentry.org/R-ecology-lesson/03-dplyr.html
@@ -32,7 +95,7 @@ df1 <- df %>%
     "Ball in Play (Seconds)" = BIP_Seconds,
     "Game Total (Seconds)" = Game_Time_Seconds,
     "Ball not in Play (Seconds)" = Ball_not_in_Play_Seconds,
-    "Dwell (as % of Exact Game Time)" = Dwell_pc,
+    "Dwell (Ball not in play as % of Exact Game Time)" = Dwell_pc,
     "Goals Scored" = Goals_Scored
   )
 # View the changes
